@@ -14,7 +14,7 @@ jobs:
   test-and-scan:
     name: Backend Quality & Vulnerability Scan
     runs-on: ubuntu-latest
-env:
+    env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout Source Code
@@ -47,7 +47,8 @@ env:
     needs: test-and-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -84,7 +85,6 @@ env:
     needs: build-and-ship
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout Deployment Validation Scripts
         uses: actions/checkout@v4
