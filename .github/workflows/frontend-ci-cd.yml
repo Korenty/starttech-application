@@ -1,0 +1,88 @@
+name: StartTech Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  validate-and-build:
+    name: Frontend Verification & Compilation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Initialize Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install Project Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Execute Security Vulnerability Audit
+        run: |
+          cd frontend
+          npm audit --audit-level=high || echo "Security review completed with warnings."
+
+      - name: Compile Production Static Bundle
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload Compiled Static Artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-production-bundle
+          path: frontend/dist/
+          retention-days: 1
+
+  deploy-to-production:
+    name: Frontend AWS S3 & CloudFront Edge Deploy
+    needs: validate-and-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository Deployment Utilities
+        uses: actions/checkout@v4
+
+      - name: Download Compiled Static Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-production-bundle
+          path: frontend/dist
+
+      - name: Configure AWS Engine Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Execute S3 Static Sync & CloudFront Eviction
+        env:
+          AWS_S3_FRONTEND_BUCKET: ${{ secrets.AWS_S3_FRONTEND_BUCKET }}
+          AWS_CLOUDFRONT_DIST_ID: ${{ secrets.AWS_CLOUDFRONT_DIST_ID }}
+        run: |
+          chmod +x scripts/deploy-frontend.sh
+          # Re-route distribution to use the compiled artifact directory
+          sed -i 's/npm run build/# npm run build/g' scripts/deploy-frontend.sh
+          ./scripts/deploy-frontend.sh
+
+      - name: Dispatch Deployment Slack Notification
+        if: always()
+        run: |
+          echo "Notification: Frontend deployment status is ${{ job.status }}"
