@@ -1,7 +1,7 @@
 # ==========================================
 # STAGE 1: Compilation Environment
 # ==========================================
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # Install core build-essential tools for caching dependencies if needed
 RUN apk add --no-cache git
