@@ -14,8 +14,7 @@ jobs:
   test-and-scan:
     name: Backend Quality & Vulnerability Scan
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -23,7 +22,7 @@ jobs:
       - name: Initialize Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.24.0'
           cache-dependency-path: backend/go.mod
 
       - name: Execute Code Compilation Quality Checks
@@ -47,8 +46,7 @@ jobs:
     needs: test-and-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -85,6 +83,7 @@ jobs:
     needs: build-and-ship
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Deployment Validation Scripts
         uses: actions/checkout@v4
