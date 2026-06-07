@@ -1,4 +1,16 @@
 #!/bin/bash
+set -e
+
+# --- SAFETY CHECK ---
+if [ -z "$AWS_ASG_NAME" ]; then
+  echo "ERROR: AWS_ASG_NAME is not set! Check your GitHub Secrets."
+  exit 1
+fi
+# --------------------
+
+# ... rest of your script ...
+
+#!/bin/bash
 # ------------------------------------------------------------------------------
 # StartTech Automation Script: Backend Multi-Stage Build & ASG Rolling Update
 # ------------------------------------------------------------------------------

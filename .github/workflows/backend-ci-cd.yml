@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'backend/**'
+      - 'scripts/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -14,27 +15,22 @@ jobs:
   test-and-scan:
     name: Backend Quality & Vulnerability Scan
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
-
       - name: Initialize Go Environment
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.0'
           cache-dependency-path: backend/go.mod
-
       - name: Execute Code Compilation Quality Checks
         run: |
           cd backend
           go vet ./...
-
       - name: Run Application Unit Tests
         run: |
           cd backend
           go test -v ./... || echo "Unit tests parsed successfully."
-
       - name: Static Security Vulnerability Audit
         uses: securego/gosec@master
         with:
@@ -46,28 +42,23 @@ jobs:
     needs: test-and-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build and Scan Docker Image Local Layers
+      - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           load: true
           tags: starttech-backend-api:test
-
       - name: Push Container Images via Delivery Script
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -75,6 +66,11 @@ jobs:
           AWS_ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
           AWS_ASG_NAME: ${{ secrets.AWS_ASG_NAME }}
         run: |
+          # Explicitly export to sub-shell
+          export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
+          export AWS_REGION=$AWS_REGION
+          export AWS_ECR_REPOSITORY=$AWS_ECR_REPOSITORY
+          export AWS_ASG_NAME=$AWS_ASG_NAME
           chmod +x scripts/deploy-backend.sh
           ./scripts/deploy-backend.sh
 
@@ -83,26 +79,22 @@ jobs:
     needs: build-and-ship
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Deployment Validation Scripts
+      - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Configure AWS Operational Credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Execute Live Smoke & Health Probes
         env:
           STARTTECH_ALB_URL: http://${{ secrets.AWS_ALB_DNS_NAME }}/health
         run: |
           chmod +x scripts/health-check.sh
           ./scripts/health-check.sh
-
-      - name: Execute Emergency Fleet Rollback on Outage
+      - name: Execute Emergency Fleet Rollback
         if: failure()
         env:
           AWS_ASG_NAME: ${{ secrets.AWS_ASG_NAME }}
