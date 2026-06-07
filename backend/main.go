@@ -1,3 +1,4 @@
+// Pipeline deployment test - triggering rolling update
 package main
 
 import (
