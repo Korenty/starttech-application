@@ -1,3 +1,4 @@
+Markdown
 # StartTech Application Deployment Platform (`starttech-application`)
 
 Welcome to the central application source repository for the StartTech platform. This workspace houses the frontend interface engine, backend API components, system automation scripts, and GitHub Actions continuous integration pipelines.
@@ -21,8 +22,6 @@ starttech-application/
     ├── deploy-backend.sh           # ECR image compilation and ASG refresh runner
     ├── health-check.sh             # Live ALB endpoint validation probe
     └── rollback.sh                 # Emergency disaster recovery rollback engine
-
-
 🛠️ Local Development & Operations
 1. Executing Local Automation Runners
 Every automation script is located within the scripts/ directory and is pre-configured with executable file permissions. To execute deployments manually, pass the runtime context parameters as environment variables:

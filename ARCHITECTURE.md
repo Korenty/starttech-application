@@ -22,26 +22,30 @@ The platform is engineered around a decoupled, highly available multi-tier syste
 * **Session Cache Matrix:** High-velocity caching and transient session tracking run inside a multi-AZ Amazon ElastiCache Redis cluster deployed across isolated database subnets.
 * **Data Persistence Core:** Transaction records and operational logs persist inside a distributed MongoDB Atlas cluster, decoupled from the localized VPC state.
 
+### 4. CI/CD & Orchestration Layer (Updated)
+* **Container Registry:** AWS ECR serves as the immutable source of truth for backend images.
+* **Pipeline Automation:** GitHub Actions orchestrates quality gates, vulnerability scanning (`gosec`/`npm audit`), and deployment.
+* **Rolling Orchestration:** The pipeline utilizes the `StartInstanceRefresh` API to perform zero-downtime rolling updates on the ASG fleet.
+
 ---
 
 ## 🔄 End-to-End Data Traffic Flow
 
+
+
 ```text
 [ Global User Access ] 
-         │
-         ├──► (Static Assets / Web App UI) ──► [ Amazon CloudFront CDN ] ──► [ Secure S3 Bucket via OAC ]
-         │
-         └──► (Dynamic API Requests) ───────► [ Application Load Balancer ]
-                                                         │ (Port 8080 Routing via Public Subnets)
-                                                         ▼
-                                             [ Auto Scaling Group Fleet ] (Private Compute Subnets)
-                                                   │              │
-                                                   │ (Port 6379)  │ (Port 27017 Outbound TLS)
-                                                   ▼              ▼
-                                            [ Amazon Redis ]   [ MongoDB Atlas Cloud Core ]
-
-
-
+          │
+          ├──► (Static Assets / Web App UI) ──► [ Amazon CloudFront CDN ] ──► [ Secure S3 Bucket via OAC ]
+          │
+          └──► (Dynamic API Requests) ───────► [ Application Load Balancer ]
+                                                 │ (Port 8080 Routing via Public Subnets)
+                                                 ▼
+                                       [ Auto Scaling Group Fleet ] (Private Compute Subnets)
+                                           │               │
+                                           │ (Port 6379)   │ (Port 27017 Outbound TLS)
+                                           ▼               ▼
+                                      [ Amazon Redis ]  [ MongoDB Atlas Cloud Core ]
 
 🔒 Security Infrastructure Matrix
 Least-Privilege Networking: Subnet layers enforce a rigid unidirectional outbound flow. Compute nodes have zero direct public IP mapping.
@@ -49,3 +53,5 @@ Least-Privilege Networking: Subnet layers enforce a rigid unidirectional outboun
 Vulnerability Guardrails: Code bases pass through static analysis scanning (npm audit for frontend, gosec for Golang) prior to containerization or edge distribution.
 
 State Verification: All cross-tier authentication strings, MongoDB connection tokens, and AWS execution keys reside inside secure environment variables managed natively via GitHub Secrets and runtime task definitions.
+
+Deployment Integrity: The deployment pipeline enforces an automated rollback strategy (rollback.sh) triggered immediately upon failed health probes during smoke tests.                                      
